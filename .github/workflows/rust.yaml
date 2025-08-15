@@ -1,0 +1,39 @@
+on:
+  push:
+    tags:
+      - "v*"
+
+name: Publish
+
+jobs:
+  build_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo build --verbose
+      - name: Run tests
+        run: cargo test --verbose
+
+  crates_io_publish:
+    name: Publish (crates.io)
+    needs:
+      - build_test
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - run: cargo install cargo-release
+      - name: cargo login
+        run: |-
+          echo "${{ secrets.CRATES_IO_API_TOKEN }}" | cargo login
+
+      - name: "cargo release publish"
+        run: |-
+          cargo release \
+            publish \
+            --workspace \
+            --all-features \
+            --allow-branch HEAD \
+            --no-confirm \
+            --no-verify \
+            --execute
